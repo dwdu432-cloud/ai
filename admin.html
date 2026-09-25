@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم قسم الذكاء الاصطناعي</title>
+    <style>
+        body {
+            font-family: Tahoma, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        h2, h3 {
+            color: #0088cc;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        .btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-admin {
+            background: #17a2b8;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .img-preview {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>لوحة إدارة وتوثيق نشاطات القسم 🎓</h2>
+        <hr>
+
+        <!-- 1. إضافة نشاط/ورشة جديدة -->
+        <div class="card">
+            <h3>إضافة ورشة / نشاط جديد للقسم ➕</h3>
+            <form onsubmit="addActivity(event)">
+                <input type="text" id="act_title" placeholder="عنوان الورشة" style="width: 40%;" required>
+                <input type="text" id="act_desc" placeholder="وصف سريع" style="width: 40%;" required>
+                <button type="submit" class="btn">إضافة الورشة</button>
+            </form>
+        </div>
+
+        <!-- 2. إضافة أدمن جديد -->
+        <div class="card">
+            <h3>إضافة أدمن / مشرف جديد (مقرر القسم أو أستاذ) 👤</h3>
+            <form onsubmit="addAdmin(event)">
+                <input type="text" id="admin_tg_id" placeholder="Telegram ID" required>
+                <input type="text" id="admin_name" placeholder="الاسم الكامل" required>
+                <button type="submit" class="btn btn-admin">منح صلاحية الأدمن</button>
+            </form>
+        </div>
+
+        <!-- 3. جدول تدقيق وإعتماد الشهادات والدرجات -->
+        <div class="card">
+            <h3>طلبات الشهادات المعلقة للطلاب 📝</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>رقم/ID الطالب</th>
+                        <th>الشهادة</th>
+                        <th>الحالة</th>
+                        <th>الدرجة</th>
+                        <th>الإجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in submissions %}
+                    <tr>
+                        <td>{{ sub.student_id }}</td>
+                        <td>
+                            <a href="/{{ sub.certificate_path }}" target="_blank">
+                                <img src="/{{ sub.certificate_path }}" class="img-preview" alt="الشهادة">
+                            </a>
+                        </td>
+                        <td>{{ sub.status }}</td>
+                        <td>
+                            {% if sub.status == 'pending' %}
+                            <input type="number" id="points_{{ sub.id }}" min="1" max="10" value="5">
+                            {% else %}
+                            <strong>{{ sub.points }} درجات</strong>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if sub.status == 'pending' %}
+                            <button onclick="approveSubmission({{ sub.id }})" class="btn">اعتماد والدرجة</button>
+                            {% else %}
+                            <span style="color: green;">معتمد ✔️</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function addActivity(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('title', document.getElementById('act_title').value);
+            formData.append('description', document.getElementById('act_desc').value);
+            const res = await fetch('/api/add-activity', { method: 'POST', body: formData });
+            const data = await res.json();
+            alert(data.message);
+            location.reload();
+        }
+
+        async function addAdmin(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('telegram_id', document.getElementById('admin_tg_id').value);
+            formData.append('full_name', document.getElementById('admin_name').value);
+            const res = await fetch('/api/add-admin', { method: 'POST', body: formData });
+            const data = await res.json();
+            alert(data.message);
+            location.reload();
+        }
+
+        async function approveSubmission(subId) {
+            const points = document.getElementById(`points_${subId}`).value;
+            const formData = new FormData();
+            formData.append('submission_id', subId);
+            formData.append('points', points);
+            const res = await fetch('/api/approve', { method: 'POST', body: formData });
+            const data = await res.json();
+            alert(data.message);
+            location.reload();
+        }
+    </script>
+</body>
+</html>
